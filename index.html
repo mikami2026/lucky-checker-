@@ -52,6 +52,39 @@
             50% { opacity: 0.75; }
         }
 
+        /* ====== LANG TOGGLE ====== */
+        .lang-toggle {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 100;
+            display: flex;
+            background: rgba(18,18,42,0.92);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 99px;
+            padding: 3px;
+            backdrop-filter: blur(8px);
+        }
+
+        .lang-btn {
+            padding: 6px 15px;
+            border-radius: 99px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            letter-spacing: 0.05em;
+        }
+
+        .lang-btn.active {
+            background: linear-gradient(135deg, #7c6fff, #ff6b9d);
+            color: white;
+        }
+
         #app {
             position: relative;
             z-index: 1;
@@ -105,9 +138,7 @@
         }
 
         /* ====== PROGRESS ====== */
-        .progress-wrap {
-            margin-bottom: 28px;
-        }
+        .progress-wrap { margin-bottom: 28px; }
 
         .progress-meta {
             display: flex;
@@ -203,7 +234,6 @@
         }
 
         .opt-icon { font-size: 1.5rem; flex-shrink: 0; }
-
         .opt-body { flex: 1; }
         .opt-text { font-size: 0.93rem; font-weight: 500; margin-bottom: 2px; }
         .opt-detail { font-size: 0.78rem; color: var(--text-muted); }
@@ -284,7 +314,6 @@
 
         .result-header p { color: var(--text-muted); font-size: 0.88rem; }
 
-        /* Gauge */
         .gauge-wrap {
             display: flex;
             flex-direction: column;
@@ -336,7 +365,6 @@
             line-height: 1.75;
         }
 
-        /* Breakdown */
         .section-card {
             background: var(--card);
             border: 1px solid var(--border);
@@ -380,7 +408,6 @@
             transition: width 1.1s ease;
         }
 
-        /* Insight */
         .insight {
             background: rgba(124,111,255,0.07);
             border: 1px solid rgba(124,111,255,0.18);
@@ -418,6 +445,10 @@
 </head>
 <body>
     <div class="bg-stars" id="stars"></div>
+    <div class="lang-toggle">
+        <button class="lang-btn active" id="btnJa" onclick="setLang('ja')">JA</button>
+        <button class="lang-btn" id="btnEn" onclick="setLang('en')">EN</button>
+    </div>
     <div id="app"></div>
 
 <script>
@@ -431,134 +462,346 @@ for (let i = 0; i < 90; i++) {
     starsEl.appendChild(s);
 }
 
-/* ---------- Data ---------- */
+/* ---------- UI Translations ---------- */
+const ui = {
+    ja: {
+        title: '世界の中での<br>あなたの恵まれ度',
+        desc: '私たちが生まれ落ちる環境は、自分では選べません。<br>10の質問に答えて、世界約80億人の中で<br>あなたがどれくらい恵まれているかを確認してみましょう。',
+        start: 'はじめる →',
+        note: 'データは世界銀行・国連等の公開統計に基づく概算値です',
+        question: '質問',
+        of: '/',
+        complete: '% 完了',
+        back: '← 戻る',
+        next: '次へ →',
+        showResult: '結果を見る 🎯',
+        resultTitle: 'あなたの恵まれ度スコア',
+        resultSub: '世界約80億人との比較',
+        scoreSection: '📊 カテゴリー別スコア',
+        insightTitle: '💡 このスコアについて',
+        insightBody: 'スコアは、世界銀行・国連・フリーダムハウスなどの統計に基づく概算です。スコアが高い項目は「その恩恵を受けられていない人が世界に多い」ことを意味します。恵まれた条件への感謝と、世界をより公平にするための意識のヒントにしていただければ幸いです。',
+        restart: '🔄 もう一度チェックする',
+        footer: 'データ出典: 世界銀行 (2023)、UNICEF、フリーダムハウス (2024)、ITU、WFP 等の統計を基にした概算値です。<br>正確な数値は出典・年度により異なります。',
+        unit: '/ 100点',
+        levels: [
+            { label: '非常に恵まれている ✨', color: '#4ecca3', bg: 'rgba(78,204,163,0.15)',  min: 78 },
+            { label: 'かなり恵まれている 🌟', color: '#7c6fff', bg: 'rgba(124,111,255,0.15)', min: 58 },
+            { label: '世界平均に近い 🌏',     color: '#ffd93d', bg: 'rgba(255,217,61,0.15)',  min: 38 },
+            { label: '困難な環境にある 💙',   color: '#ff9f43', bg: 'rgba(255,159,67,0.15)',  min: 18 },
+            { label: '非常に困難な環境 ❤️',   color: '#ff6b6b', bg: 'rgba(255,107,107,0.15)', min: 0  },
+        ],
+        messages: [
+            { min: 78, msg: 'あなたは世界の多くの人と比べて、非常に恵まれた環境に生きています。この状況は努力だけでなく、生まれた場所・時代・家庭など、自分では選べない要素に大きく左右されています。この幸運を大切にしながら、他者への思いやりを忘れないでいてください。' },
+            { min: 58, msg: 'あなたは世界平均と比べて、かなり恵まれた環境にいます。多くの機会と安全が保障された生活は、決して当たり前ではありません。世界には今この瞬間も困難と闘っている人たちがいることを心に留めておきましょう。' },
+            { min: 38, msg: 'あなたは世界の中で中程度の状況にいます。恵まれた部分もあれば、課題を抱える部分もあることでしょう。すべての人に固有の困難と喜びがあり、状況の違いを超えてつながることが大切です。' },
+            { min: 18, msg: 'あなたはいくつかの困難な状況に置かれています。それでも毎日を生き抜いているあなたの強さは素晴らしいものです。世界中で、より公平な社会を求める声が上がっています。' },
+            { min: 0,  msg: 'あなたは非常に困難な環境に置かれています。その中でも今日をここまで生き抜いてきた強さを大切にしてください。世界中の人々が、あなたのような状況がなくなる日を目指して行動しています。' },
+        ],
+    },
+    en: {
+        title: 'How Fortunate Are You<br>in the World?',
+        desc: "We cannot choose the environment we are born into.<br>Answer 10 questions to see how fortunate you are<br>among the world's 8 billion people.",
+        start: 'Start →',
+        note: 'Data is based on published statistics from the World Bank, UN, and others',
+        question: 'Question',
+        of: '/',
+        complete: '% complete',
+        back: '← Back',
+        next: 'Next →',
+        showResult: 'See Results 🎯',
+        resultTitle: 'Your Fortune Score',
+        resultSub: 'Compared to about 8 billion people worldwide',
+        scoreSection: '📊 Score by Category',
+        insightTitle: '💡 About This Score',
+        insightBody: 'The score is an estimate based on statistics from the World Bank, UN, Freedom House, and others. A higher score in an item means "many people in the world cannot benefit from it." We hope this serves as a hint for gratitude for your fortunate conditions and awareness for making the world more equitable.',
+        restart: '🔄 Check Again',
+        footer: 'Data sources: Estimates based on statistics from the World Bank (2023), UNICEF, Freedom House (2024), ITU, WFP, and others.<br>Exact figures vary by source and year.',
+        unit: '/ 100',
+        levels: [
+            { label: 'Highly Fortunate ✨',                color: '#4ecca3', bg: 'rgba(78,204,163,0.15)',  min: 78 },
+            { label: 'Quite Fortunate 🌟',                 color: '#7c6fff', bg: 'rgba(124,111,255,0.15)', min: 58 },
+            { label: 'Near World Average 🌏',              color: '#ffd93d', bg: 'rgba(255,217,61,0.15)',  min: 38 },
+            { label: 'Facing Difficulties 💙',             color: '#ff9f43', bg: 'rgba(255,159,67,0.15)',  min: 18 },
+            { label: 'In Very Difficult Circumstances ❤️', color: '#ff6b6b', bg: 'rgba(255,107,107,0.15)', min: 0  },
+        ],
+        messages: [
+            { min: 78, msg: "Compared to many people in the world, you live in a very fortunate environment. This situation is not just due to your own efforts — it is greatly influenced by factors you couldn't choose: the place you were born, the era, your family background. Please cherish this fortune and never forget compassion for others." },
+            { min: 58, msg: 'Compared to the world average, you are in a quite fortunate environment. A life with many opportunities and guaranteed safety is by no means a given. Keep in mind that people around the world are struggling with hardship at this very moment.' },
+            { min: 38, msg: 'You are in a moderate situation within the world. There are parts where you are fortunate, and parts where you face challenges. Everyone has their own difficulties and joys, and it is important to connect beyond differences in circumstances.' },
+            { min: 18, msg: 'You are facing some difficult circumstances. Even so, the strength you show in making it through each day is remarkable. Around the world, voices are rising for a more equitable society.' },
+            { min: 0,  msg: 'You are in extremely difficult circumstances. Please cherish the strength that has carried you through to today. People around the world are working toward a day when situations like yours no longer exist.' },
+        ],
+    },
+};
+
+/* ---------- Questions ---------- */
 const questions = [
     {
         icon: '🌍',
-        title: 'あなたが生まれた国の所得水準は？',
-        short: '生まれた国',
-        context: '世界人口の約16%しか高所得国に住んでいません。生まれた国は、教育・医療・収入の機会に最も大きく影響する要素のひとつです。',
-        options: [
-            { text: '高所得国（日本・米国・西欧諸国など）', detail: '世界人口の約16%', score: 88, icon: '🏙️' },
-            { text: '上位中所得国（中国・ブラジル・南アフリカなど）', detail: '世界人口の約35%', score: 55, icon: '🌆' },
-            { text: '下位中所得国（インド・ナイジェリアなど）', detail: '世界人口の約35%', score: 27, icon: '🏘️' },
-            { text: '低所得国（コンゴ・エチオピア・アフガニスタンなど）', detail: '世界人口の約14%', score: 7, icon: '🏚️' },
-        ]
+        ja: {
+            title: 'あなたが生まれた国の所得水準は？',
+            short: '生まれた国',
+            context: '世界人口の約16%しか高所得国に住んでいません。生まれた国は、教育・医療・収入の機会に最も大きく影響する要素のひとつです。',
+            options: [
+                { text: '高所得国（日本・米国・西欧諸国など）', detail: '世界人口の約16%', score: 88, icon: '🏙️' },
+                { text: '上位中所得国（中国・ブラジル・南アフリカなど）', detail: '世界人口の約35%', score: 55, icon: '🌆' },
+                { text: '下位中所得国（インド・ナイジェリアなど）', detail: '世界人口の約35%', score: 27, icon: '🏘️' },
+                { text: '低所得国（コンゴ・エチオピア・アフガニスタンなど）', detail: '世界人口の約14%', score: 7, icon: '🏚️' },
+            ]
+        },
+        en: {
+            title: 'What is the income level of the country you were born in?',
+            short: 'Birth country',
+            context: "Only about 16% of the world's population lives in high-income countries. The country you were born in is one of the most influential factors affecting your education, healthcare, and income opportunities.",
+            options: [
+                { text: 'High-income country (Japan, USA, Western Europe, etc.)', detail: 'About 16% of world population', score: 88, icon: '🏙️' },
+                { text: 'Upper-middle-income (China, Brazil, South Africa, etc.)', detail: 'About 35% of world population', score: 55, icon: '🌆' },
+                { text: 'Lower-middle-income (India, Nigeria, etc.)', detail: 'About 35% of world population', score: 27, icon: '🏘️' },
+                { text: 'Low-income country (DRC, Ethiopia, Afghanistan, etc.)', detail: 'About 14% of world population', score: 7, icon: '🏚️' },
+            ]
+        }
     },
     {
         icon: '💧',
-        title: '安全な飲み水にアクセスできますか？',
-        short: '安全な水へのアクセス',
-        context: '世界では約22億人が安全に管理された飲み水を使えません。水道が当たり前に使える環境は、実は世界人口の半分程度にすぎません。',
-        options: [
-            { text: '自宅の水道から安全に飲める', detail: '世界人口の約56%', score: 83, icon: '🚿' },
-            { text: '基本的なアクセスはあるが完全には安全でない', detail: '世界人口の約18%', score: 52, icon: '🪣' },
-            { text: '購入または長距離を運ぶ必要がある', detail: '世界人口の約16%', score: 22, icon: '🏃' },
-            { text: '安全な水へのアクセスがほとんどない', detail: '世界人口の約10%', score: 5, icon: '🌵' },
-        ]
+        ja: {
+            title: '安全な飲み水にアクセスできますか？',
+            short: '安全な水へのアクセス',
+            context: '世界では約22億人が安全に管理された飲み水を使えません。水道が当たり前に使える環境は、実は世界人口の半分程度にすぎません。',
+            options: [
+                { text: '自宅の水道から安全に飲める', detail: '世界人口の約56%', score: 83, icon: '🚿' },
+                { text: '基本的なアクセスはあるが完全には安全でない', detail: '世界人口の約18%', score: 52, icon: '🪣' },
+                { text: '購入または長距離を運ぶ必要がある', detail: '世界人口の約16%', score: 22, icon: '🏃' },
+                { text: '安全な水へのアクセスがほとんどない', detail: '世界人口の約10%', score: 5, icon: '🌵' },
+            ]
+        },
+        en: {
+            title: 'Do you have access to safe drinking water?',
+            short: 'Safe water access',
+            context: "About 2.2 billion people worldwide lack access to safely managed drinking water. Having tap water safe to drink is actually available to only about half the world's population.",
+            options: [
+                { text: 'Can safely drink from home tap', detail: 'About 56% of world population', score: 83, icon: '🚿' },
+                { text: 'Basic access but not fully safe', detail: 'About 18% of world population', score: 52, icon: '🪣' },
+                { text: 'Need to purchase or carry water long distances', detail: 'About 16% of world population', score: 22, icon: '🏃' },
+                { text: 'Little or no access to safe water', detail: 'About 10% of world population', score: 5, icon: '🌵' },
+            ]
+        }
     },
     {
         icon: '🍚',
-        title: '食事の状況は？',
-        short: '食料安全保障',
-        context: '世界では約7億3千万人（約9%）が慢性的な飢餓にあります。さらに約23億人が中程度の食料不安を抱えています。',
-        options: [
-            { text: '毎日、好きなものを十分に食べられる', detail: '世界人口の約58%程度', score: 87, icon: '🍽️' },
-            { text: '十分だが食の選択肢は限られている', detail: '世界人口の約20%程度', score: 60, icon: '🥘' },
-            { text: '時々、食事が不十分なことがある', detail: '世界人口の約13%', score: 28, icon: '😔' },
-            { text: '慢性的に食料が不足している', detail: '世界人口の約9%', score: 5, icon: '😢' },
-        ]
+        ja: {
+            title: '食事の状況は？',
+            short: '食料安全保障',
+            context: '世界では約7億3千万人（約9%）が慢性的な飢餓にあります。さらに約23億人が中程度の食料不安を抱えています。',
+            options: [
+                { text: '毎日、好きなものを十分に食べられる', detail: '世界人口の約58%程度', score: 87, icon: '🍽️' },
+                { text: '十分だが食の選択肢は限られている', detail: '世界人口の約20%程度', score: 60, icon: '🥘' },
+                { text: '時々、食事が不十分なことがある', detail: '世界人口の約13%', score: 28, icon: '😔' },
+                { text: '慢性的に食料が不足している', detail: '世界人口の約9%', score: 5, icon: '😢' },
+            ]
+        },
+        en: {
+            title: 'What is your food situation?',
+            short: 'Food security',
+            context: 'About 730 million people (about 9%) suffer from chronic hunger worldwide. An additional 2.3 billion people face moderate food insecurity.',
+            options: [
+                { text: 'Can eat enough of what I want every day', detail: 'About 58% of world population', score: 87, icon: '🍽️' },
+                { text: 'Enough but limited food choices', detail: 'About 20% of world population', score: 60, icon: '🥘' },
+                { text: "Sometimes don't have enough to eat", detail: 'About 13% of world population', score: 28, icon: '😔' },
+                { text: 'Chronically lacking food', detail: 'About 9% of world population', score: 5, icon: '😢' },
+            ]
+        }
     },
     {
         icon: '📚',
-        title: '受けた教育の最高レベルは？',
-        short: '教育水準',
-        context: '世界の成人のうち大学以上の教育を受けた人は約25〜30%と推定されます。識字率は約87%ですが、教育の質・年数には大きな格差があります。',
-        options: [
-            { text: '大学・専門学校以上を卒業', detail: '世界成人の約25〜30%', score: 90, icon: '🎓' },
-            { text: '高校を卒業', detail: '世界成人の約40%程度', score: 65, icon: '📝' },
-            { text: '中学校レベルまで', detail: '世界成人の約20%', score: 32, icon: '✏️' },
-            { text: '小学校以下または未就学', detail: '世界成人の約13%', score: 8, icon: '📖' },
-        ]
+        ja: {
+            title: '受けた教育の最高レベルは？',
+            short: '教育水準',
+            context: '世界の成人のうち大学以上の教育を受けた人は約25〜30%と推定されます。識字率は約87%ですが、教育の質・年数には大きな格差があります。',
+            options: [
+                { text: '大学・専門学校以上を卒業', detail: '世界成人の約25〜30%', score: 90, icon: '🎓' },
+                { text: '高校を卒業', detail: '世界成人の約40%程度', score: 65, icon: '📝' },
+                { text: '中学校レベルまで', detail: '世界成人の約20%', score: 32, icon: '✏️' },
+                { text: '小学校以下または未就学', detail: '世界成人の約13%', score: 8, icon: '📖' },
+            ]
+        },
+        en: {
+            title: 'What is the highest level of education you received?',
+            short: 'Education level',
+            context: 'An estimated 25–30% of adults worldwide have received college-level or higher education. Literacy is about 87%, but there are major gaps in education quality and years of schooling.',
+            options: [
+                { text: 'University / vocational school or higher', detail: 'About 25–30% of world adults', score: 90, icon: '🎓' },
+                { text: 'High school graduate', detail: 'About 40% of world adults', score: 65, icon: '📝' },
+                { text: 'Up to middle school level', detail: 'About 20% of world adults', score: 32, icon: '✏️' },
+                { text: 'Elementary school or less / no schooling', detail: 'About 13% of world adults', score: 8, icon: '📖' },
+            ]
+        }
     },
     {
         icon: '🏥',
-        title: '現在の健康状態は？',
-        short: '健康状態',
-        context: '世界では10億人以上が重篤な慢性疾患を抱えており、数億人が医療へのアクセスすら持てない環境に置かれています。',
-        options: [
-            { text: '特に大きな健康上の問題はない', detail: '最も恵まれた状況', score: 85, icon: '💪' },
-            { text: '軽度の慢性疾患がある（高血圧・軽度の糖尿病など）', detail: '管理可能な範囲', score: 57, icon: '💊' },
-            { text: '重度の慢性疾患または障害がある', detail: '多くの困難を伴う', score: 24, icon: '🏨' },
-            { text: '生命に関わる深刻な健康問題がある', detail: '非常に困難な状況', score: 7, icon: '⚕️' },
-        ]
+        ja: {
+            title: '現在の健康状態は？',
+            short: '健康状態',
+            context: '世界では10億人以上が重篤な慢性疾患を抱えており、数億人が医療へのアクセスすら持てない環境に置かれています。',
+            options: [
+                { text: '特に大きな健康上の問題はない', detail: '最も恵まれた状況', score: 85, icon: '💪' },
+                { text: '軽度の慢性疾患がある（高血圧・軽度の糖尿病など）', detail: '管理可能な範囲', score: 57, icon: '💊' },
+                { text: '重度の慢性疾患または障害がある', detail: '多くの困難を伴う', score: 24, icon: '🏨' },
+                { text: '生命に関わる深刻な健康問題がある', detail: '非常に困難な状況', score: 7, icon: '⚕️' },
+            ]
+        },
+        en: {
+            title: 'What is your current health status?',
+            short: 'Health status',
+            context: 'More than 1 billion people worldwide have serious chronic diseases, and hundreds of millions have no access to healthcare at all.',
+            options: [
+                { text: 'No major health issues', detail: 'Most fortunate situation', score: 85, icon: '💪' },
+                { text: 'Mild chronic condition (hypertension, mild diabetes, etc.)', detail: 'Manageable range', score: 57, icon: '💊' },
+                { text: 'Severe chronic disease or disability', detail: 'Involves many difficulties', score: 24, icon: '🏨' },
+                { text: 'Serious life-threatening health issues', detail: 'Very difficult situation', score: 7, icon: '⚕️' },
+            ]
+        }
     },
     {
         icon: '💻',
-        title: 'インターネットを自由に使えますか？',
-        short: 'インターネットアクセス',
-        context: '2023年時点で世界人口の約37%（約30億人）はインターネットにアクセスできません。デジタルデバイドは教育・経済の格差を広げています。',
-        options: [
-            { text: 'スマートフォンやPCで自由に使える', detail: '世界人口の約63%', score: 80, icon: '📱' },
-            { text: '制限はあるが基本的に使える', detail: '世界人口の約10%程度', score: 53, icon: '🌐' },
-            { text: 'たまにしか使えない', detail: '世界人口の約10%程度', score: 23, icon: '📡' },
-            { text: 'ほとんど使えない', detail: '世界人口の約17%', score: 5, icon: '❌' },
-        ]
+        ja: {
+            title: 'インターネットを自由に使えますか？',
+            short: 'インターネットアクセス',
+            context: '2023年時点で世界人口の約37%（約30億人）はインターネットにアクセスできません。デジタルデバイドは教育・経済の格差を広げています。',
+            options: [
+                { text: 'スマートフォンやPCで自由に使える', detail: '世界人口の約63%', score: 80, icon: '📱' },
+                { text: '制限はあるが基本的に使える', detail: '世界人口の約10%程度', score: 53, icon: '🌐' },
+                { text: 'たまにしか使えない', detail: '世界人口の約10%程度', score: 23, icon: '📡' },
+                { text: 'ほとんど使えない', detail: '世界人口の約17%', score: 5, icon: '❌' },
+            ]
+        },
+        en: {
+            title: 'Do you have free access to the internet?',
+            short: 'Internet access',
+            context: "As of 2023, about 37% of the world's population (about 3 billion people) cannot access the internet. The digital divide widens educational and economic gaps.",
+            options: [
+                { text: 'Can use freely on smartphone or PC', detail: 'About 63% of world population', score: 80, icon: '📱' },
+                { text: 'Some restrictions but basically accessible', detail: 'About 10% of world population', score: 53, icon: '🌐' },
+                { text: 'Only occasional access', detail: 'About 10% of world population', score: 23, icon: '📡' },
+                { text: 'Hardly any access', detail: 'About 17% of world population', score: 5, icon: '❌' },
+            ]
+        }
     },
     {
         icon: '⚡',
-        title: '電気は安定して使えますか？',
-        short: '電力へのアクセス',
-        context: '世界では約7億5千万人（約9%）が電力にアクセスできません。それ以外にも、頻繁な停電が日常の国が数多くあります。',
-        options: [
-            { text: '24時間安定して電気が使える', detail: '世界人口の約70%程度', score: 84, icon: '🔌' },
-            { text: '時々停電があるが基本的に使える', detail: '世界人口の約20%程度', score: 53, icon: '💡' },
-            { text: '頻繁な停電・不安定な供給', detail: '世界人口の約5%程度', score: 23, icon: '🕯️' },
-            { text: '電力へのアクセスがほとんどない', detail: '世界人口の約9%', score: 5, icon: '🌑' },
-        ]
+        ja: {
+            title: '電気は安定して使えますか？',
+            short: '電力へのアクセス',
+            context: '世界では約7億5千万人（約9%）が電力にアクセスできません。それ以外にも、頻繁な停電が日常の国が数多くあります。',
+            options: [
+                { text: '24時間安定して電気が使える', detail: '世界人口の約70%程度', score: 84, icon: '🔌' },
+                { text: '時々停電があるが基本的に使える', detail: '世界人口の約20%程度', score: 53, icon: '💡' },
+                { text: '頻繁な停電・不安定な供給', detail: '世界人口の約5%程度', score: 23, icon: '🕯️' },
+                { text: '電力へのアクセスがほとんどない', detail: '世界人口の約9%', score: 5, icon: '🌑' },
+            ]
+        },
+        en: {
+            title: 'Do you have stable access to electricity?',
+            short: 'Electricity access',
+            context: 'About 750 million people (about 9%) worldwide lack access to electricity. Many other countries experience frequent blackouts as a daily reality.',
+            options: [
+                { text: '24-hour stable electricity', detail: 'About 70% of world population', score: 84, icon: '🔌' },
+                { text: 'Occasional outages but mostly available', detail: 'About 20% of world population', score: 53, icon: '💡' },
+                { text: 'Frequent outages / unstable supply', detail: 'About 5% of world population', score: 23, icon: '🕯️' },
+                { text: 'Little or no access to electricity', detail: 'About 9% of world population', score: 5, icon: '🌑' },
+            ]
+        }
     },
     {
         icon: '🏦',
-        title: '金融サービスへのアクセスは？',
-        short: '金融サービスのアクセス',
-        context: '世界では約14億人（約18%）が銀行口座を持たず、経済的機会が大幅に制限されています（世界銀行 2021年）。',
-        options: [
-            { text: '銀行口座があり、ローン・投資なども使える', detail: '世界人口の約76%', score: 82, icon: '💳' },
-            { text: '基本的な口座はあるがサービスは限定的', detail: '世界人口の約10%程度', score: 54, icon: '🏧' },
-            { text: 'モバイルマネーのみ利用可能', detail: '世界人口の約5%程度', score: 28, icon: '📲' },
-            { text: '金融サービスへのアクセスがない', detail: '世界人口の約18%', score: 7, icon: '💸' },
-        ]
+        ja: {
+            title: '金融サービスへのアクセスは？',
+            short: '金融サービスのアクセス',
+            context: '世界では約14億人（約18%）が銀行口座を持たず、経済的機会が大幅に制限されています（世界銀行 2021年）。',
+            options: [
+                { text: '銀行口座があり、ローン・投資なども使える', detail: '世界人口の約76%', score: 82, icon: '💳' },
+                { text: '基本的な口座はあるがサービスは限定的', detail: '世界人口の約10%程度', score: 54, icon: '🏧' },
+                { text: 'モバイルマネーのみ利用可能', detail: '世界人口の約5%程度', score: 28, icon: '📲' },
+                { text: '金融サービスへのアクセスがない', detail: '世界人口の約18%', score: 7, icon: '💸' },
+            ]
+        },
+        en: {
+            title: 'What is your access to financial services?',
+            short: 'Financial services',
+            context: 'About 1.4 billion people (about 18%) worldwide have no bank account, severely limiting their economic opportunities (World Bank, 2021).',
+            options: [
+                { text: 'Have a bank account and can use loans, investments, etc.', detail: 'About 76% of world population', score: 82, icon: '💳' },
+                { text: 'Basic account but limited services', detail: 'About 10% of world population', score: 54, icon: '🏧' },
+                { text: 'Mobile money only', detail: 'About 5% of world population', score: 28, icon: '📲' },
+                { text: 'No access to financial services', detail: 'About 18% of world population', score: 7, icon: '💸' },
+            ]
+        }
     },
     {
         icon: '🗳️',
-        title: '住んでいる国の政治的自由は？',
-        short: '政治的自由',
-        context: 'フリーダムハウス2024年報告書によると、世界人口の約40%が「自由でない」国に住み、完全に自由な国に住む人は約20%に過ぎません。',
-        options: [
-            { text: '完全な民主主義・自由（言論・選挙の自由）', detail: '世界人口の約40%', score: 85, icon: '🕊️' },
-            { text: '部分的な自由がある（一部制限あり）', detail: '世界人口の約20%', score: 55, icon: '⚖️' },
-            { text: 'かなりの制限がある', detail: '世界人口の約18%', score: 24, icon: '🔒' },
-            { text: '権威主義・独裁（基本的自由がない）', detail: '世界人口の約22%', score: 5, icon: '🚫' },
-        ]
+        ja: {
+            title: '住んでいる国の政治的自由は？',
+            short: '政治的自由',
+            context: 'フリーダムハウス2024年報告書によると、世界人口の約40%が「自由でない」国に住み、完全に自由な国に住む人は約20%に過ぎません。',
+            options: [
+                { text: '完全な民主主義・自由（言論・選挙の自由）', detail: '世界人口の約40%', score: 85, icon: '🕊️' },
+                { text: '部分的な自由がある（一部制限あり）', detail: '世界人口の約20%', score: 55, icon: '⚖️' },
+                { text: 'かなりの制限がある', detail: '世界人口の約18%', score: 24, icon: '🔒' },
+                { text: '権威主義・独裁（基本的自由がない）', detail: '世界人口の約22%', score: 5, icon: '🚫' },
+            ]
+        },
+        en: {
+            title: 'What is the political freedom in the country you live in?',
+            short: 'Political freedom',
+            context: "According to Freedom House's 2024 report, about 40% of the world's population lives in 'not free' countries, and only about 20% live in fully free countries.",
+            options: [
+                { text: 'Full democracy and freedom (free speech, free elections)', detail: 'About 40% of world population', score: 85, icon: '🕊️' },
+                { text: 'Partial freedom (some restrictions)', detail: 'About 20% of world population', score: 55, icon: '⚖️' },
+                { text: 'Significant restrictions', detail: 'About 18% of world population', score: 24, icon: '🔒' },
+                { text: 'Authoritarian / dictatorship (no basic freedoms)', detail: 'About 22% of world population', score: 5, icon: '🚫' },
+            ]
+        }
     },
     {
         icon: '🛡️',
-        title: '身の安全・治安の状況は？',
-        short: '身の安全・治安',
-        context: '2023年、約1億1千万人以上が紛争や迫害により避難を余儀なくされています。日常的に身の危険を感じない環境は、多くの人には当たり前ではありません。',
-        options: [
-            { text: '安全な環境で暮らし、身の危険を感じない', detail: '比較的恵まれた状況', score: 87, icon: '🏡' },
-            { text: '時々不安はあるが概ね安全', detail: 'やや恵まれた状況', score: 60, icon: '🏙️' },
-            { text: '治安が悪く、日常的に危険を感じる', detail: '世界の一部の地域', score: 22, icon: '⚠️' },
-            { text: '紛争地域や深刻な暴力にさらされている', detail: '約1.1億人以上', score: 3, icon: '🆘' },
-        ]
+        ja: {
+            title: '身の安全・治安の状況は？',
+            short: '身の安全・治安',
+            context: '2023年、約1億1千万人以上が紛争や迫害により避難を余儀なくされています。日常的に身の危険を感じない環境は、多くの人には当たり前ではありません。',
+            options: [
+                { text: '安全な環境で暮らし、身の危険を感じない', detail: '比較的恵まれた状況', score: 87, icon: '🏡' },
+                { text: '時々不安はあるが概ね安全', detail: 'やや恵まれた状況', score: 60, icon: '🏙️' },
+                { text: '治安が悪く、日常的に危険を感じる', detail: '世界の一部の地域', score: 22, icon: '⚠️' },
+                { text: '紛争地域や深刻な暴力にさらされている', detail: '約1.1億人以上', score: 3, icon: '🆘' },
+            ]
+        },
+        en: {
+            title: 'What is your personal safety and security situation?',
+            short: 'Personal safety',
+            context: 'In 2023, more than 110 million people were forced to flee due to conflict or persecution. Living without daily fear for your safety is not a given for many people.',
+            options: [
+                { text: 'Live in a safe environment, no fear for safety', detail: 'Relatively fortunate situation', score: 87, icon: '🏡' },
+                { text: 'Occasionally worried but generally safe', detail: 'Somewhat fortunate situation', score: 60, icon: '🏙️' },
+                { text: 'Poor security, daily sense of danger', detail: 'Some regions of the world', score: 22, icon: '⚠️' },
+                { text: 'Exposed to conflict or serious violence', detail: 'More than 110 million people', score: 3, icon: '🆘' },
+            ]
+        }
     },
 ];
 
 /* ---------- State ---------- */
+let lang = 'ja';
 let screen = 'welcome';
 let qIdx = 0;
 let answers = new Array(questions.length).fill(null);
+
+/* ---------- Language ---------- */
+function setLang(l) {
+    lang = l;
+    document.documentElement.lang = l;
+    document.getElementById('btnJa').classList.toggle('active', l === 'ja');
+    document.getElementById('btnEn').classList.toggle('active', l === 'en');
+    render();
+}
 
 /* ---------- Helpers ---------- */
 function scoreColor(s) {
@@ -569,63 +812,56 @@ function scoreColor(s) {
 }
 
 function levelInfo(s) {
-    if (s >= 78) return { label: '非常に恵まれている ✨', color: '#4ecca3', bg: 'rgba(78,204,163,0.15)' };
-    if (s >= 58) return { label: 'かなり恵まれている 🌟', color: '#7c6fff', bg: 'rgba(124,111,255,0.15)' };
-    if (s >= 38) return { label: '世界平均に近い 🌏', color: '#ffd93d', bg: 'rgba(255,217,61,0.15)' };
-    if (s >= 18) return { label: '困難な環境にある 💙', color: '#ff9f43', bg: 'rgba(255,159,67,0.15)' };
-    return { label: '非常に困難な環境 ❤️', color: '#ff6b6b', bg: 'rgba(255,107,107,0.15)' };
+    return ui[lang].levels.find(l => s >= l.min);
 }
 
 function getMessage(s) {
-    if (s >= 78) return 'あなたは世界の多くの人と比べて、非常に恵まれた環境に生きています。この状況は努力だけでなく、生まれた場所・時代・家庭など、自分では選べない要素に大きく左右されています。この幸運を大切にしながら、他者への思いやりを忘れないでいてください。';
-    if (s >= 58) return 'あなたは世界平均と比べて、かなり恵まれた環境にいます。多くの機会と安全が保障された生活は、決して当たり前ではありません。世界には今この瞬間も困難と闘っている人たちがいることを心に留めておきましょう。';
-    if (s >= 38) return 'あなたは世界の中で中程度の状況にいます。恵まれた部分もあれば、課題を抱える部分もあることでしょう。すべての人に固有の困難と喜びがあり、状況の違いを超えてつながることが大切です。';
-    if (s >= 18) return 'あなたはいくつかの困難な状況に置かれています。それでも毎日を生き抜いているあなたの強さは素晴らしいものです。世界中で、より公平な社会を求める声が上がっています。';
-    return 'あなたは非常に困難な環境に置かれています。その中でも今日をここまで生き抜いてきた強さを大切にしてください。世界中の人々が、あなたのような状況がなくなる日を目指して行動しています。';
+    return ui[lang].messages.find(m => s >= m.min).msg;
 }
 
 /* ---------- Render ---------- */
 function render() {
     const app = document.getElementById('app');
     if (screen === 'welcome') app.innerHTML = renderWelcome();
-    else if (screen === 'quiz')   app.innerHTML = renderQuiz();
-    else                          app.innerHTML = renderResult();
+    else if (screen === 'quiz') app.innerHTML = renderQuiz();
+    else app.innerHTML = renderResult();
     window.scrollTo({ top: 0 });
     if (screen === 'result') animateResult();
 }
 
 function renderWelcome() {
+    const t = ui[lang];
     return `
     <div class="welcome">
         <span class="welcome-globe">🌏</span>
-        <h1>世界の中での<br>あなたの恵まれ度</h1>
-        <p>私たちが生まれ落ちる環境は、自分では選べません。<br>
-        10の質問に答えて、世界約80億人の中で<br>
-        あなたがどれくらい恵まれているかを確認してみましょう。</p>
-        <button class="btn btn-primary" style="padding:15px 44px;font-size:1.05rem;" onclick="startQuiz()">はじめる →</button>
-        <p class="welcome-note">データは世界銀行・国連等の公開統計に基づく概算値です</p>
+        <h1>${t.title}</h1>
+        <p>${t.desc}</p>
+        <button class="btn btn-primary" style="padding:15px 44px;font-size:1.05rem;" onclick="startQuiz()">${t.start}</button>
+        <p class="welcome-note">${t.note}</p>
     </div>`;
 }
 
 function renderQuiz() {
+    const t = ui[lang];
     const q = questions[qIdx];
+    const ql = q[lang];
     const sel = answers[qIdx];
     const pct = (qIdx / questions.length) * 100;
     return `
     <div class="progress-wrap">
         <div class="progress-meta">
-            <span>質問 ${qIdx + 1} / ${questions.length}</span>
-            <span>${Math.round(pct)}% 完了</span>
+            <span>${t.question} ${qIdx + 1} ${t.of} ${questions.length}</span>
+            <span>${Math.round(pct)}${t.complete}</span>
         </div>
         <div class="progress-track"><div class="progress-bar" style="width:${pct}%"></div></div>
     </div>
     <div class="q-card">
         <span class="q-icon">${q.icon}</span>
-        <div class="q-num">質問 ${qIdx + 1}</div>
-        <div class="q-title">${q.title}</div>
-        <div class="q-context">${q.context}</div>
+        <div class="q-num">${t.question} ${qIdx + 1}</div>
+        <div class="q-title">${ql.title}</div>
+        <div class="q-context">${ql.context}</div>
         <div class="options">
-            ${q.options.map((o, i) => `
+            ${ql.options.map((o, i) => `
             <div class="option ${sel === i ? 'selected' : ''}" onclick="pick(${i})">
                 <span class="opt-icon">${o.icon}</span>
                 <div class="opt-body">
@@ -637,15 +873,16 @@ function renderQuiz() {
         </div>
     </div>
     <div class="nav-row">
-        ${qIdx > 0 ? `<button class="btn btn-ghost" onclick="prev()">← 戻る</button>` : ''}
+        ${qIdx > 0 ? `<button class="btn btn-ghost" onclick="prev()">${t.back}</button>` : ''}
         <button class="btn btn-primary" onclick="next()" ${sel === null ? 'disabled' : ''}>
-            ${qIdx < questions.length - 1 ? '次へ →' : '結果を見る 🎯'}
+            ${qIdx < questions.length - 1 ? t.next : t.showResult}
         </button>
     </div>`;
 }
 
 function renderResult() {
-    const scores = answers.map((a, i) => a !== null ? questions[i].options[a].score : 50);
+    const t = ui[lang];
+    const scores = answers.map((a, i) => a !== null ? questions[i][lang].options[a].score : 50);
     const total = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
     const lv = levelInfo(total);
     const msg = getMessage(total);
@@ -658,8 +895,8 @@ function renderResult() {
     return `
     <div class="result">
         <div class="result-header">
-            <h2>あなたの恵まれ度スコア</h2>
-            <p>世界約80億人との比較</p>
+            <h2>${t.resultTitle}</h2>
+            <p>${t.resultSub}</p>
         </div>
 
         <div class="gauge-wrap">
@@ -680,7 +917,7 @@ function renderResult() {
                 </svg>
                 <div class="gauge-center">
                     <div class="gauge-num" id="gNum">0</div>
-                    <div class="gauge-unit">/ 100点</div>
+                    <div class="gauge-unit">${t.unit}</div>
                 </div>
             </div>
             <span class="level-badge" style="background:${lv.bg};color:${lv.color}">${lv.label}</span>
@@ -688,14 +925,14 @@ function renderResult() {
         </div>
 
         <div class="section-card">
-            <h3>📊 カテゴリー別スコア</h3>
+            <h3>${t.scoreSection}</h3>
             ${questions.map((q, i) => {
                 const s = scores[i];
                 const c = scoreColor(s);
                 return `
                 <div class="bd-item">
                     <div class="bd-row">
-                        <span class="bd-name">${q.icon} ${q.short}</span>
+                        <span class="bd-name">${q.icon} ${q[lang].short}</span>
                         <span class="bd-val" style="color:${c}">${s}</span>
                     </div>
                     <div class="bd-track">
@@ -706,20 +943,15 @@ function renderResult() {
         </div>
 
         <div class="insight">
-            <h4>💡 このスコアについて</h4>
-            <p>スコアは、世界銀行・国連・フリーダムハウスなどの統計に基づく概算です。
-            スコアが高い項目は「その恩恵を受けられていない人が世界に多い」ことを意味します。
-            恵まれた条件への感謝と、世界をより公平にするための意識のヒントにしていただければ幸いです。</p>
+            <h4>${t.insightTitle}</h4>
+            <p>${t.insightBody}</p>
         </div>
 
         <div style="text-align:center;margin-bottom:20px">
-            <button class="btn btn-primary" onclick="restart()">🔄 もう一度チェックする</button>
+            <button class="btn btn-primary" onclick="restart()">${t.restart}</button>
         </div>
 
-        <p class="result-footer">
-            データ出典: 世界銀行 (2023)、UNICEF、フリーダムハウス (2024)、ITU、WFP 等の統計を基にした概算値です。<br>
-            正確な数値は出典・年度により異なります。
-        </p>
+        <p class="result-footer">${t.footer}</p>
     </div>`;
 }
 
@@ -731,10 +963,6 @@ function animateResult() {
 
     const target = parseFloat(arc.dataset.target);
     const total  = parseFloat(arc.dataset.total);
-    const scoreTarget = parseInt(document.querySelector('.gauge-num, #gNum')?.closest('.gauge-box')
-        ?.querySelector('[data-target]')?.dataset.target || 0);
-
-    // Compute score from total score shown in gArc
     const finalScore = Math.round((target / total) * 100);
 
     let t = 0;
@@ -749,7 +977,6 @@ function animateResult() {
         if (t >= dur) clearInterval(timer);
     }, step);
 
-    // Animate bars
     setTimeout(() => {
         document.querySelectorAll('.bd-fill').forEach(el => {
             el.style.width = el.dataset.w + '%';
