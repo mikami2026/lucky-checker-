@@ -8,7 +8,7 @@
 世界基準で見た自分の豊かさが100点満点で表示されます。（ただし、最高スコアは80点となっております。）
 
 ## デモ
-https://0gr39007726117p-netizen.github.io/lucky-checker-/lucky-checker.html
+https://0gr39007726117p-netizen.github.io/lucky-checker-/
 
 ## 使い方
 1. 10個の質問に答える
